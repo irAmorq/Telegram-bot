@@ -1,43 +1,24 @@
-import requests
+import telebot
+import threading
 import time
-from keep_alive import keep_alive
+from flask import Flask
 
 TOKEN = "7965663112:AAEwtPTPLE-sz-XC8RRXUBQs5AP1UYoifus"
-URL = f"https://api.telegram.org/bot{TOKEN}"
+bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
 
-def get_updates(offset=None):
-    response = requests.get(URL + "/getUpdates", params={"offset": offset})
-    return response.json()
+@bot.message_handler(func=lambda message: True)
+def send_welcome(message):
+    markup = telebot.types.InlineKeyboardMarkup()
+    btn = telebot.types.InlineKeyboardButton(text="open", url="https://t.me/Sixp_robot/SIXP")
+    markup.add(btn)
+    bot.send_message(message.chat.id, "لینک مورد نظر:", reply_markup=markup)
 
-def send_message(chat_id, text, button_url):
-    reply_markup = {
-        "inline_keyboard": [[
-            {"text": "Open", "url": button_url}
-        ]]
-    }
-    data = {
-        "chat_id": chat_id,
-        "text": text,
-        "reply_markup": reply_markup
-    }
-    requests.post(URL + "/sendMessage", json=data)
+def keep_alive():
+    @app.route('/')
+    def home():
+        return "Bot is running!"
+    app.run(host='0.0.0.0', port=8080)
 
-def main():
-    last_update_id = None
-    while True:
-        updates = get_updates(last_update_id)
-        if "result" in updates:
-            for update in updates["result"]:
-                message = update.get("message", {})
-                text = message.get("text", "")
-                chat_id = message["chat"]["id"]
-
-                if text:
-                    send_message(chat_id, "سلام! روی دکمه بزن:", "https://t.me/Sixp_robot/SIXP")
-
-                last_update_id = update["update_id"] + 1
-        time.sleep(2)
-
-if __name__ == "__main__":
-    keep_alive()
-    main()
+threading.Thread(target=keep_alive).start()
+bot.infinity_polling()
